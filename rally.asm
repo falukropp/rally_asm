@@ -69,6 +69,9 @@ NotMovingRight
         stx xpos
         
 ; Read joystick up/down
+        lda speedi
+        cmp #4
+        beq NotAccelerating
         lda #$10
         and SWCHA
         bne NotAccelerating
@@ -80,6 +83,9 @@ NotMovingRight
         inc speedi
         jmp Done
 NotAccelerating  
+        lda speedi
+        cmp #-2
+        beq Done
         lda #$20
         and SWCHA
         bne Done
