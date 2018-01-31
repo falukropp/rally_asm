@@ -34,14 +34,26 @@ speedf  .byte #0
 disti   .byte #0
 distf   .byte #0
 zone    .byte #0
+fueli    .byte #0
+fuelf    .byte #0
+fuellines .byte #0
 
-rowcounter equ $86
+
+rowcounter .byte #0
 
         seg Code
-        org $f000
+        org $f000                
     
 start   
         CLEAN_START
+    
+NewGame
+FuelOut
+Crash
+        lda #20
+        sta fueli
+        lda #$FF
+        sta fuelf
 NextFrame
         VERTICAL_SYNC
         TIMER_SETUP 37
@@ -69,7 +81,7 @@ NotMovingRight
         stx xpos
         
 ; Read joystick up/down
-        lda speedi
+    lda speedi
         cmp #4
         beq NotAccelerating
         lda #$10
@@ -83,7 +95,7 @@ NotMovingRight
         inc speedi
         jmp Done
 NotAccelerating  
-        lda speedi
+    lda speedi
         cmp #-2
         beq Done
         lda #$20
@@ -105,6 +117,19 @@ Done
         adc speedi
         sta disti
         
+; Update Fuel
+        lda fuelf
+        sec
+        sbc #$04
+        sta fuelf
+        lda fueli
+        sbc #0
+        bpl FuelLeft
+        
+        jmp FuelOut
+FuelLeft
+    sta fueli
+        
 
 ; Set Sprite Pos
         txa
@@ -125,19 +150,51 @@ DivideLoop
         sta WSYNC
         sta HMOVE
 
-        TIMER_WAIT      
         ldx #0
         lda disti
         sta rowcounter
         
 ;        SKIP_SCANLINES 150
+
+        lda fueli
+        asl
+        adc fueli ; fuellines < 128, no need to clc
+; A = 3 * fueli
+        tay
+        lda FuelMeterData,Y
+        sta PF0
+        iny
+        lda FuelMeterData,Y
+        sta PF1
+        iny
+        lda FuelMeterData,Y
+        sta PF2
+        lda #%00000010
+        sta CTRLPF
+        lda #$80
+        sta COLUP0
+        lda #$00
+        sta COLUP1
+        
+        TIMER_WAIT      
+        lda #8
+        sta fuellines
+FuelMeter
+        sta WSYNC                
+        dec fuellines
+        bne FuelMeter
+        
+        lda #0
+        sta PF0
+        sta PF1
+        sta PF2
         
 BeforeSpriteLoop
         BACKGROUND_LINES
         sta WSYNC
         sta COLUBK
         inx
-        cpx #150
+        cpx #141
         bcc BeforeSpriteLoop
         
         
@@ -192,6 +249,31 @@ SpriteData
     .byte #%01111000;$1A
 ;---End Graphics Data---
 
+; PF0, PF1, PF2
+FuelMeterData
+    .byte #%00000000, #%00000000, #%00000000
+    .byte #%00010000, #%00000000, #%00000000
+    .byte #%00110000, #%00000000, #%00000000
+    .byte #%01110000, #%00000000, #%00000000
+    .byte #%11110000, #%00000000, #%00000000
+    
+    .byte #%11110000, #%10000000, #%00000000
+    .byte #%11110000, #%11000000, #%00000000
+    .byte #%11110000, #%11100000, #%00000000
+    .byte #%11110000, #%11110000, #%00000000
+    .byte #%11110000, #%11111000, #%00000000
+    .byte #%11110000, #%11111100, #%00000000
+    .byte #%11110000, #%11111110, #%00000000
+    .byte #%11110000, #%11111111, #%00000000
+
+    .byte #%11110000, #%11111111, #%00000001
+    .byte #%11110000, #%11111111, #%00000011
+    .byte #%11110000, #%11111111, #%00000111
+    .byte #%11110000, #%11111111, #%00001111
+    .byte #%11110000, #%11111111, #%00011111
+    .byte #%11110000, #%11111111, #%00111111
+    .byte #%11110000, #%11111111, #%01111111
+    .byte #%11110000, #%11111111, #%11111111
 
 ; Epilogue
 
