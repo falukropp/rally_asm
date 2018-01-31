@@ -159,15 +159,13 @@ DivideLoop
         lda fueli
         asl
         adc fueli ; fuellines < 128, no need to clc
-; A = 3 * fueli
         tay
+; Y = 3 * fueli
         lda FuelMeterData,Y
         sta PF0
-        iny
-        lda FuelMeterData,Y
+        lda FuelMeterData+1,Y
         sta PF1
-        iny
-        lda FuelMeterData,Y
+        lda FuelMeterData+2,Y
         sta PF2
         lda #%00000010
         sta CTRLPF
