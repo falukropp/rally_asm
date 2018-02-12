@@ -40,6 +40,8 @@ fuelf    .byte #0
 fuellines .byte #0
 rowcounter .byte #0
 
+THREE_COPIES    equ %011 ;
+
 ; Pointers to bitmap for each digit
 Digit0      .word
 Digit1      .word
@@ -60,6 +62,10 @@ start
 NewGame
 FuelOut
 Crash
+    lda #0
+        sta BCDScore
+        sta BCDScore+1
+        sta BCDScore+2
         lda #20
         sta fueli
         lda #$FF
@@ -87,6 +93,7 @@ NextFrame
 ; ---------------------
         lda $1A
         sta COLUP0
+        sta COLUP1
         
 ; Read joystick left right
 ; ---------------------
@@ -164,27 +171,25 @@ FuelLeft
         lda disti
         sta rowcounter
         
-;        SKIP_SCANLINES 150
-
-; Setup Fuelmeter
-; --------------
-        lda fueli
-        asl
-        adc fueli ; fuellines < 128, no need to clc
-        tay
-; Y = 3 * fueli
-        lda FuelMeterData,Y
-        sta PF0
-        lda FuelMeterData+1,Y
-        sta PF1
-        lda FuelMeterData+2,Y
-        sta PF2
-        lda #%00000010
-        sta CTRLPF
-        lda #$80
-        sta COLUP0
-        lda #$00
-        sta COLUP1
+; Setup Score
+        lda #THREE_COPIES
+        sta NUSIZ0
+        sta NUSIZ1
+; set horizontal position of player objects
+        sta WSYNC
+        SLEEP 26 ; Works with 26
+        sta RESP0
+        sta RESP1
+        lda #0
+        sta HMP0
+        lda #$10
+        sta HMP1
+        sta WSYNC
+        sta HMOVE
+        sta HMCLR
+        lda #1
+        sta VDELP0
+        sta VDELP1
         
         TIMER_WAIT      
         
@@ -192,16 +197,17 @@ FuelLeft
 ; Visible frame
 ; ----------------------------------------------
 
-; FuelMeter
+; Score
 ; ---------
 
-        lda #8
-        sta fuellines
-FuelMeterLoop
-        sta WSYNC                
-        dec fuellines
-        bne FuelMeterLoop
-        
+        lda #0
+        sta PF0
+        sta PF1
+        sta PF2
+
+    jsr GetDigitPtrs    ; get pointers        
+        jsr DrawDigits      ; draw digits
+                
         lda #0
         sta PF0
         sta PF1
@@ -226,7 +232,10 @@ DivideLoop
         sta RESP0 
         sta WSYNC
         sta HMOVE
-
+        lda #0
+        sta NUSIZ0
+        sta VDELP0
+        
 ; Playfield Before Sprite
 ; -----------------------
 
@@ -235,7 +244,7 @@ BeforeSpriteLoop
         sta WSYNC
         sta COLUBK
         inx
-        cpx #143
+        cpx #125
         bcc BeforeSpriteLoop
         
         
@@ -274,8 +283,43 @@ AfterSpriteLoop
         
         sta WSYNC
         
+; Setup Fuelmeter
+; --------------
         ldx #0
         stx COLUBK
+        sta PF0
+        sta PF1
+        sta PF2        
+        lda #%00000010
+        sta CTRLPF
+        lda #$80
+        sta COLUP0
+        lda #$00
+        sta COLUP1
+        sta WSYNC
+        
+        lda fueli        
+        asl
+        adc fueli ; fuellines < 128, no need to clc
+        tay
+; Y = 3 * fueli
+        lda FuelMeterData,Y
+        sta PF0
+        lda FuelMeterData+1,Y
+        sta PF1
+        lda FuelMeterData+2,Y
+        sta PF2
+        
+        ldx #7
+FuelmeterLoop:        
+        sta WSYNC
+        dex
+        bne FuelmeterLoop
+        
+        ldx #0
+        stx PF0
+        stx PF1
+        stx PF2        
 
 ; ----------------------------------------------
 ; Overscan
@@ -344,9 +388,10 @@ GetDigitPtrs subroutine
 
 ; Display the resulting 48x8 bitmap
 ; using the Digit0-5 pointers.
+    align $100
 DrawDigits subroutine
     sta WSYNC
-    SLEEP 40    ; start near end of scanline
+        SLEEP 40
         lda #7
         sta LoopCount
 BigLoop
@@ -358,6 +403,7 @@ BigLoop
         sta WSYNC   ; sync to next scanline
         lda (Digit2),y  ; load B2 -> A
         sta GRP0    ; B2 -> [GRP0], B1 -> GRP1
+        
         lda (Digit5),y  ; load B5 -> A
         sta Temp    ; B5 -> temp
         lda (Digit4),y  ; load B4
