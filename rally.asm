@@ -11,36 +11,33 @@
         bne .vblank
         ENDM
 
-
-        MAC BACKGROUND_LINES
-        dec rowcounter
-        lda rowcounter
-        and #$3F
-
-        bne .blackrow
-        lda #33
-        jmp .end
-.blackrow
-        lda #00  
-.end
-        ENDM
-
         seg.u Variables
         org $80
 Temp        .byte
         
+; Car Horiz pointer        
 xpos    .byte #0
+; Lines advancement per frame
 speedi  .byte #0
 speedf  .byte #0
-disti   .byte #0
+; Which line in Zone the bumper of the car is 
+disti   .byte #0 
 distf   .byte #0
+; Which zone is the car (bumper) in?
 zone    .byte #0
+; In which zone did the player pick up fuel last?
+lastfuelpickup .byte #0
+; Fuel left
 fueli    .byte #0
 fuelf    .byte #0
 fuellines .byte #0
-rowcounter .byte #0
+scanline  .byte #0
+; If fuel pellet is to be shown, at what line?
+; If not to be shown, set to 255 or something > playfield lines.
+pelletline .byte #0
 
 THREE_COPIES    equ %011 ;
+PLAYFIELD_SIZE  equ #162 ;
 
 ; Pointers to bitmap for each digit
 Digit0      .word
@@ -57,20 +54,25 @@ LoopCount   .byte ; counts scanline when drawing
         org $f000                
     
 start   
-        CLEAN_START
-    
 NewGame
 FuelOut
 Crash
-    lda #0
-        sta BCDScore
-        sta BCDScore+1
-        sta BCDScore+2
+        CLEAN_START
+    
         lda #20
         sta fueli
         lda #$FF
         sta fuelf
         
+        ; Start a bit in, in zone 1.
+        ; Makes it so zone > lastfuelpickup so there is pellet
+        ; in first zone.
+        ; Also, gives some room for zone 0 to be special wall zone.
+        lda #10
+        sta disti
+        lda #1
+        sta zone
+                
 ; ----------------------------------------------
 ; Vertical Sync
 ; ----------------------------------------------
@@ -163,15 +165,25 @@ Done
         jmp FuelOut
 FuelLeft
     sta fueli
+    
         
 
 ; Setup rows for frame
 ; --------------
-        ldx #0
+; So rowcounter starts at the dist for the topmost row
+        
+; Check if fuel pellet is on screen.        
+    lda zone
+        cmp lastfuelpickup
+        bpl setupscore
+; Pellet should be a line 125 in zone... 
+; But the front buffer of the car is at scanline 125.
+; pelletline should be at 125 + (disti - 125)  = disti
         lda disti
-        sta rowcounter
+    sta pelletline
         
 ; Setup Score
+setupscore:
         lda #THREE_COPIES
         sta NUSIZ0
         sta NUSIZ1
@@ -191,13 +203,15 @@ FuelLeft
         sta VDELP0
         sta VDELP1
         
-        TIMER_WAIT      
+        TIMER_WAIT
+        
+         TIMER_SETUP 192
         
 ; ----------------------------------------------
 ; Visible frame
 ; ----------------------------------------------
 
-; Score
+; Score ( 9+ lines )
 ; ---------
 
         lda #0
@@ -212,16 +226,20 @@ FuelLeft
         sta PF0
         sta PF1
         sta PF2
+
+        lda #0
+        sta NUSIZ0
+        sta VDELP0
         
-; Set Sprite Pos
+; Set Sprite Horiz Pos ( 1 line )
 ; --------------
         lda xpos
         sec
         sta WSYNC
         sta HMCLR
-DivideLoop
+SpriteLoop
         sbc #15
-        bcs DivideLoop
+        bcs SpriteLoop
 
         eor #7
         asl
@@ -230,60 +248,70 @@ DivideLoop
         asl
         sta HMP0
         sta RESP0 
+                
+; Set Fuel Horiz Pelletpos ( 2 line )
+; --------------
+        lda #64
+        sec
+        sta WSYNC
+PelletLoop
+        sbc #15
+        bcs PelletLoop
+
+        eor #7
+        asl
+        asl
+        asl
+        asl
+        sta HMM1
+        sta RESM1
         sta WSYNC
         sta HMOVE
+
         lda #0
-        sta NUSIZ0
-        sta VDELP0
+        sta NUSIZ1
+        sta VDELP1
         
-; Playfield Before Sprite
-; -----------------------
+        
+; PlayfieldLoop (167 lines )       
 
-BeforeSpriteLoop
-        BACKGROUND_LINES
+    ldx #0
+        lda #0
+        sta scanline
+PlayFieldLoop
         sta WSYNC
-        sta COLUBK
-        inx
-        cpx #125
-        bcc BeforeSpriteLoop
-        
-        
-        ldy #8
-        ldx SpriteData,y
-        dey
-        BACKGROUND_LINES
-        
-; Sprite
-; -----------------------
-SpriteLoop
-
-        sta WSYNC       
+        sta ENAM1
         stx GRP0
-        sta COLUBK
-        
+
+        lda scanline
+        sec
+        sbc #125
+        cmp #9 ; SpriteHeight
+        bcc InSprite
+        lda #0
+InSprite
+        tay        
         ldx SpriteData,y
-        
-        BACKGROUND_LINES
-        
-        dey
-        bpl SpriteLoop
 
-; Playfield After Sprite
-; -----------------------
 
-        sta WSYNC       
-        stx GRP0
-        ldx #31
-AfterSpriteLoop        
-        sta WSYNC
-        sta COLUBK
-        BACKGROUND_LINES
-        dex
-        bne AfterSpriteLoop
+        ldy #0
+        lda scanline
+        cmp pelletline
+        bne DontShowPellet
+        ldy #2
+DontShowPellet        
+        tya   
+        inc scanline
+        ldy scanline
+        cpy #166
+        bcc PlayFieldLoop
+
         
+        lda #0
+        sta ENAM1
         sta WSYNC
         
-; Setup Fuelmeter
+; Setup Fuelmeter ( 1 + 7 lines )
 ; --------------
         ldx #0
         stx COLUBK
@@ -319,7 +347,9 @@ FuelmeterLoop:
         ldx #0
         stx PF0
         stx PF1
-        stx PF2        
+        stx PF2  
+        
+        TIMER_WAIT
 
 ; ----------------------------------------------
 ; Overscan
@@ -336,7 +366,34 @@ FuelmeterLoop:
         
 ; ==============================================        
 ; Subroutines
-; ==============================================        
+; ==============================================     
+
+; SetHorizPos - Sets the horizontal position of an object.
+; The X register contains the index of the desired object:
+;  X=0: player 0
+;  X=1: player 1
+;  X=2: missile 0
+;  X=3: missile 1
+;  X=4: ball
+; This routine does a WSYNC and HMOVE before executing,
+; so whatever you do here will not take effect until you
+; call the routine again or do your own WSYNC and HMOVE.
+        align $100
+SetHorizPos
+    sta WSYNC   ; start a new line
+    sec     ; set carry flag
+DivideLoop
+    sbc #15     ; subtract 15
+    bcs DivideLoop  ; branch until negative
+    eor #7      ; calculate fine offset
+    asl
+    asl
+    asl
+    asl
+    sta RESP0,x ; fix coarse position
+    sta HMP0,x  ; set fine offset
+    rts     ; return to caller
+
 
 ; Adds value to 6-BCD-digit score.
 ; A = 1st BCD digit
