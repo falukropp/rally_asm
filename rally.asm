@@ -170,16 +170,17 @@ FuelLeft
 
 ; Setup rows for frame
 ; --------------
-; So rowcounter starts at the dist for the topmost row
-        
-; Check if fuel pellet is on screen.        
-    lda zone
-        cmp lastfuelpickup
-        bpl setupscore
+; Check if fuel pellet is on screen. Start by assuming that it will be shown.
 ; Pellet should be a line 125 in zone... 
 ; But the front buffer of the car is at scanline 125.
 ; pelletline should be at 125 + (disti - 125)  = disti
         lda disti
+    sta pelletline
+    lda zone
+        cmp lastfuelpickup
+        bcs setupscore
+; Player has already pickuped up pellet in this zone or earlier... Move pellet offscreen.
+        lda #255
     sta pelletline
         
 ; Setup Score
