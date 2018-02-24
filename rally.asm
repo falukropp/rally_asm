@@ -151,6 +151,9 @@ Done
         lda disti
         adc speedi
         sta disti
+        lda zone
+        adc #0
+        sta zone
         
 ; Update Fuel
 ; --------------
@@ -170,17 +173,17 @@ FuelLeft
 
 ; Setup rows for frame
 ; --------------
-; Check if fuel pellet is on screen. Start by assuming that it will be shown.
+; Check if fuel pellet is on screen. Start by assuming that it won't be shown.
+        lda #255
+    sta pelletline
+    lda lastfuelpickup
+        cmp zone
+        bcs setupscore
+; lastfuelpickup < zone. pellet should be shown in this zone.        
 ; Pellet should be a line 125 in zone... 
 ; But the front buffer of the car is at scanline 125.
 ; pelletline should be at 125 + (disti - 125)  = disti
         lda disti
-    sta pelletline
-    lda zone
-        cmp lastfuelpickup
-        bcs setupscore
-; Player has already pickuped up pellet in this zone or earlier... Move pellet offscreen.
-        lda #255
     sta pelletline
         
 ; Setup Score
@@ -361,6 +364,17 @@ FuelmeterLoop:
         ldx #00
         ldy #00
         jsr AddScore
+        
+; Check fuel pellet pickup <-> player collision
+    bit CXM1P
+        bpl NoFuelPickup
+        
+        lda zone
+        sta lastfuelpickup
+        sta CXCLR
+        
+NoFuelPickup
+    
         TIMER_WAIT      
         jmp NextFrame
         
