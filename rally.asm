@@ -20,6 +20,7 @@ xpos    .byte #0
 ; Lines advancement per frame
 speedi  .byte #0
 speedf  .byte #0
+speedz  .byte #0 ; Only needed for negative speed (Should only be FF or 00)
 ; Which line in Zone the bumper of the car is 
 disti   .byte #0 
 distf   .byte #0
@@ -88,12 +89,12 @@ NextFrame
 
 ; Clear sprite
 ; ---------------------
-        lda $0
+        lda #0
         sta GRP0
         
 ; Set Sprite Color
 ; ---------------------
-        lda $1A
+        lda #$1A
         sta COLUP0
         sta COLUP1
         
@@ -127,7 +128,7 @@ NotMovingRight
         adc #$10
         sta speedf
         bcc Done
-        inc speedi
+        inc speedi        
         jmp Done
 NotAccelerating  
     lda speedi
@@ -143,6 +144,12 @@ NotAccelerating
         bcs Done
         dec speedi        
 Done
+    ldx #00
+    lda speedi
+        bpl WasPositiveSpeed
+        ldx #$FF
+WasPositiveSpeed
+    stx speedz
         
         lda speedf
         clc
@@ -152,7 +159,7 @@ Done
         adc speedi
         sta disti
         lda zone
-        adc #0
+        adc speedz
         sta zone
         
 ; Update Fuel
