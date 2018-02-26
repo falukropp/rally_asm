@@ -37,6 +37,7 @@ scanline  .byte #0
 ; If not to be shown, set to 255 or something > playfield lines.
 pelletline .byte #0
 
+
 THREE_COPIES    equ %011 ;
 PLAYFIELD_SIZE  equ #162 ;
 
@@ -166,7 +167,7 @@ WasPositiveSpeed
 ; --------------
         lda fuelf
         sec
-        sbc #$04
+        sbc #4
         sta fuelf
         lda fueli
         sbc #0
@@ -260,7 +261,7 @@ SpriteLoop
         sta HMP0
         sta RESP0 
                 
-; Set Fuel Horiz Pelletpos ( 2 line )
+; Set Fuel Horiz Pelletpos ( 2 lines )
 ; --------------
         lda #64
         sec
@@ -367,21 +368,34 @@ FuelmeterLoop:
 ; ----------------------------------------------
 
         TIMER_SETUP 30
-        lda #01
+        
+; Check fuel pellet pickup <-> player collision
+    bit CXM1P
+        bpl DoneWithFuelPickup
+        
+        lda zone
+        sta lastfuelpickup
+        
+        lda fueli
+        clc
+        adc #04
+        cmp #21
+        bcc StoreFuel  
+        lda #$FF
+        sta fuelf
+        lda #20
+StoreFuel        
+        sta fueli
+        
+        lda fueli
+        lsr
         ldx #00
         ldy #00
         jsr AddScore
         
-; Check fuel pellet pickup <-> player collision
-    bit CXM1P
-        bpl NoFuelPickup
-        
-        lda zone
-        sta lastfuelpickup
+DoneWithFuelPickup  
         sta CXCLR
         
-NoFuelPickup
-    
         TIMER_WAIT      
         jmp NextFrame
         
