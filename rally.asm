@@ -37,6 +37,10 @@ scanline  .byte #0
 ; If not to be shown, set to 255 or something > playfield lines.
 pelletline .byte #0
 
+pfsplit .byte #0
+pfupper .byte #0,#0
+pflower .byte #0,#0
+
 
 THREE_COPIES    equ %011 ;
 PLAYFIELD_SIZE  equ #162 ;
@@ -177,7 +181,23 @@ WasPositiveSpeed
 FuelLeft
     sta fueli
     
+; Setup playfield
+
+    lda #0
+        sta pfsplit
         
+        ldy zone
+    ldx Zonedata,y
+        stx pflower
+        stx pflower+1
+    ldx Zonedata+1,y
+        stx pfupper
+        stx pfupper+1
+        
+
+
+    
+SetupRowForFrame
 
 ; Setup rows for frame
 ; --------------
@@ -188,10 +208,13 @@ FuelLeft
         cmp zone
         bcs setupscore
 ; lastfuelpickup < zone. pellet should be shown in this zone.        
-; Pellet should be a line 125 in zone... 
-; But the front buffer of the car is at scanline 125.
-; pelletline should be at 125 + (disti - 125)  = disti
-        lda disti
+; Scanlines start at 166 at top going down to 0 at the bottom.
+; Pellet should be a line 125 in zone... (== 166 - 41)
+; The front buffer of the car (= disti) is at scanline 41
+; line 0 in zone is in scanline (41 - disti ), so line 125 is at (41 - (-125 + disti)) ==  166 - disti
+    lda #166
+        sec
+        sbc disti
     sta pelletline
         
 ; Setup Score
@@ -286,18 +309,31 @@ PelletLoop
         
         
 ; PlayfieldLoop (167 lines )       
+        lda #0
+        sta CTRLPF
+        lda #$dd
+        sta COLUPF
 
     ldx #0
-        lda #0
+        lda #166
         sta scanline
 PlayFieldLoop
         sta WSYNC
-        sta ENAM1
+        sty ENAM1
         stx GRP0
+        
+        ldy pfsplit
+        
+        lda pfupper,Y
+        sta PF0
+        sta PF1
+        lda pfupper+1,Y
+        sta PF2
+                
 
         lda scanline
         sec
-        sbc #125
+        sbc #41
         cmp #9 ; SpriteHeight
         bcc InSprite
         lda #0
@@ -311,17 +347,16 @@ InSprite
         cmp pelletline
         bne DontShowPellet
         ldy #2
+        sty pfsplit
+        
 DontShowPellet        
-        tya   
-        inc scanline
-        ldy scanline
-        cpy #166
-        bcc PlayFieldLoop
+        dec scanline
+        bne PlayFieldLoop
 
         
+        sta WSYNC
         lda #0
         sta ENAM1
-        sta WSYNC
         
 ; Setup Fuelmeter ( 1 + 7 lines )
 ; --------------
@@ -565,6 +600,17 @@ FuelMeterData
     .byte #%11110000, #%11111111, #%00111111
     .byte #%11110000, #%11111111, #%01111111
     .byte #%11110000, #%11111111, #%11111111
+    
+        align $100
+Zonedata
+    hex ff02030405060708090a0b0c0d0e0f00
+    hex 0102030405060708090a0b0c0d0e0f00
+    hex 0102030405060708090a0b0c0d0e0f00
+    hex 0102030405060708090a0b0c0d0e0f00
+    hex 0102030405060708090a0b0c0d0e0f00
+    hex 0102030405060708090a0b0c0d0e0f00
+    hex 0102030405060708090a0b0c0d0e0f00
+    hex 0102030405060708090a0b0c0d0e0f00
 
 ; Epilogue
 
