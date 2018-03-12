@@ -33,13 +33,6 @@ fueli    .byte #0
 fuelf    .byte #0
 fuellines .byte #0
 scanline  .byte #0
-; If fuel pellet is to be shown, at what line?
-; If not to be shown, set to 255 or something > playfield lines.
-pelletline .byte #0
-
-pfsplit .byte #0
-pfupper .byte #0,#0
-pflower .byte #0,#0
 
 
 THREE_COPIES    equ %011 ;
@@ -56,6 +49,10 @@ Digit5      .word
 BCDScore    hex 000000
 LoopCount   .byte ; counts scanline when drawing
 
+ZonedataLeft    ds 16
+ZonedataRight   ds 16
+ZonedataFuel    ds 16
+
         seg Code
         org $f000                
     
@@ -65,6 +62,8 @@ FuelOut
 Crash
         CLEAN_START
     
+        lda #80
+        sta xpos
         lda #20
         sta fueli
         lda #$FF
@@ -181,41 +180,24 @@ WasPositiveSpeed
 FuelLeft
     sta fueli
     
-; Setup playfield
-
-    lda #0
-        sta pfsplit
-        
-        ldy zone
-    ldx Zonedata,y
-        stx pflower
-        stx pflower+1
-    ldx Zonedata+1,y
-        stx pfupper
-        stx pfupper+1
-        
+; Setup playfield        
 
 
     
 SetupRowForFrame
+    ldx #00
+NextIndex
+    txa
+        sta ZonedataLeft,X
+        sta ZonedataRight,X
+        sta ZonedataFuel,X
+        inx
+        cpx $16
+        bne NextIndex
+        
 
 ; Setup rows for frame
 ; --------------
-; Check if fuel pellet is on screen. Start by assuming that it won't be shown.
-        lda #255
-    sta pelletline
-    lda lastfuelpickup
-        cmp zone
-        bcs setupscore
-; lastfuelpickup < zone. pellet should be shown in this zone.        
-; Scanlines start at 166 at top going down to 0 at the bottom.
-; Pellet should be a line 125 in zone... (== 166 - 41)
-; The front buffer of the car (= disti) is at scanline 41
-; line 0 in zone is in scanline (41 - disti ), so line 125 is at (41 - (-125 + disti)) ==  166 - disti
-    lda #166
-        sec
-        sbc disti
-    sta pelletline
         
 ; Setup Score
 setupscore:
@@ -309,7 +291,7 @@ PelletLoop
         
         
 ; PlayfieldLoop (167 lines )       
-        lda #0
+        lda #1 ; Reflect playfield
         sta CTRLPF
         lda #$dd
         sta COLUPF
@@ -319,15 +301,14 @@ PelletLoop
         sta scanline
 PlayFieldLoop
         sta WSYNC
-        sty ENAM1
+        sta ENAM1
         stx GRP0
         
-        ldy pfsplit
-        
-        lda pfupper,Y
-        sta PF0
+        lda ZonedataLeft,y
+
+;        sta PF0
         sta PF1
-        lda pfupper+1,Y
+        lda ZonedataRight,y
         sta PF2
                 
 
@@ -341,13 +322,17 @@ InSprite
         tay        
         ldx SpriteData,y
 
+    lda scanline
+        clc
+        adc disti
+        lsr
+        lsr
+        lsr
+        lsr
+        tay
+        lda ZonedataFuel,y
+        
 
-        ldy #0
-        lda scanline
-        cmp pelletline
-        bne DontShowPellet
-        ldy #2
-        sty pfsplit
         
 DontShowPellet        
         dec scanline
