@@ -16,23 +16,25 @@
 Temp        .byte
         
 ; Car Horiz pointer        
-xpos    .byte #0
+xpos    .byte
 ; Lines advancement per frame
-speedi  .byte #0
-speedf  .byte #0
-speedz  .byte #0 ; Only needed for negative speed (Should only be FF or 00)
-; Which line in Zone the bumper of the car is 
-disti   .byte #0 
-distf   .byte #0
-; Which zone is the car (bumper) in?
-zone    .byte #0
+speedi  .byte
+speedf  .byte
+speedz  .byte ; Only needed for negative speed (Should only be FF or 00)
+; Which line in the zone is the topmost scanline in?
+disti   .byte
+distf   .byte
+; Which zone is the topmost scanline in?
+zone    .byte
 ; In which zone did the player pick up fuel last?
-lastfuelpickup .byte #0
+distifrac .byte
+currblock .byte
+lastfuelpickup .byte
 ; Fuel left
-fueli    .byte #0
-fuelf    .byte #0
-fuellines .byte #0
-scanline  .byte #0
+fueli    .byte
+fuelf    .byte
+fuellines .byte
+scanline  .byte
 
 
 THREE_COPIES    equ %011 ;
@@ -48,6 +50,8 @@ Digit5      .word
 
 BCDScore    hex 000000
 LoopCount   .byte ; counts scanline when drawing
+
+ZonedataPtr .word
 
 ZonedataLeft    ds 16
 ZonedataRight   ds 16
@@ -73,7 +77,7 @@ Crash
         ; Makes it so zone > lastfuelpickup so there is pellet
         ; in first zone.
         ; Also, gives some room for zone 0 to be special wall zone.
-        lda #10
+        lda #200
         sta disti
         lda #1
         sta zone
@@ -184,17 +188,61 @@ FuelLeft
 
 
     
-SetupRowForFrame
-    ldx #00
-NextIndex
-    txa
-        sta ZonedataLeft,X
-        sta ZonedataRight,X
-        sta ZonedataFuel,X
-        inx
-        cpx $16
-        bne NextIndex
+SetupRoom
+        lda zone
+        asl
+        tay
+; Set ZonePtr to current zone.        
+        lda Zonedata,Y
+        sta ZonedataPtr
+        lda Zonedata+1,Y
+        sta ZonedataPtr+1
+; Set X to the chunk in Zone.
+; The Rooms are drawn upside down, so start in 255-disti
+; There are 16 chunks, so shift >> 4
+    lda #$FF 
+        sec
+        sbc disti
+        lsr
+        lsr
+        lsr
+        lsr
+; (Yes, asl, there a two bytes per chunk.)
+        asl
+        tay
+        ldx #0
         
+NextIndex   
+        lda (ZonedataPtr),Y
+        sta ZonedataLeft,X
+        iny
+        lda (ZonedataPtr),Y
+        sta ZonedataRight,X
+        iny
+        stx Temp
+        cpy #32
+        bcc SameZone
+; Load the Room for the previous zone.
+        lda zone
+        asl
+        tay
+        dey
+        dey
+        lda Zonedata,Y
+        sta ZonedataPtr
+        lda Zonedata+1,Y
+        sta ZonedataPtr+1
+        ldy #0
+        
+SameZone        
+    ldx Temp 
+        inx
+        cpx #16 
+        bne NextIndex
+
+; TODO : Set the fuel
+        sta ZonedataFuel,Y
+
 
 ; Setup rows for frame
 ; --------------
@@ -296,7 +344,17 @@ PelletLoop
         lda #$dd
         sta COLUPF
 
-    ldx #0
+        ldx #0
+        lda #$ff
+        sec
+        sbc disti
+        asl
+        asl
+        asl
+        asl
+        sta distifrac
+        ldy #0
+        sty currblock
         lda #166
         sta scanline
 PlayFieldLoop
@@ -322,13 +380,13 @@ InSprite
         tay        
         ldx SpriteData,y
 
-    lda scanline
+        lda distifrac
         clc
-        adc disti
-        lsr
-        lsr
-        lsr
-        lsr
+        adc #$0f
+        sta distifrac
+        lda currblock
+        adc #0
+        sta currblock
         tay
         lda ZonedataFuel,y
         
@@ -588,14 +646,106 @@ FuelMeterData
     
         align $100
 Zonedata
-    hex ff02030405060708090a0b0c0d0e0f00
-    hex 0102030405060708090a0b0c0d0e0f00
-    hex 0102030405060708090a0b0c0d0e0f00
-    hex 0102030405060708090a0b0c0d0e0f00
-    hex 0102030405060708090a0b0c0d0e0f00
-    hex 0102030405060708090a0b0c0d0e0f00
-    hex 0102030405060708090a0b0c0d0e0f00
-    hex 0102030405060708090a0b0c0d0e0f00
+    .word Room0
+    .word Room1
+    .word Room2
+    .word Room3
+    .word Room4
+    .word Room3
+    .word Room2
+    .word Room1
+    .word Room0
+
+Room0
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+    .byte #%11111111, #%11111111
+
+Room1
+    .byte #%10000000, #%00000001
+    .byte #%10000000, #%00000001
+    .byte #%11111100, #%00111111
+    .byte #%10000000, #%00000001
+    .byte #%10000000, #%00000001
+    .byte #%11000000, #%00000001
+    .byte #%11000000, #%00000001
+    .byte #%11100001, #%10000001
+    .byte #%11100001, #%10000001
+    .byte #%11110000, #%00000001
+    .byte #%11110000, #%00000001
+    .byte #%11110000, #%00000001
+    .byte #%11111000, #%00000001
+    .byte #%11111100, #%00000001
+    .byte #%11111100, #%00111111
+    .byte #%10001100, #%00000001
+    .byte #%10000100, #%00000001
+
+Room2
+    .byte #%00000000, #%00000000
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%11001100, #%00110011
+    .byte #%00000000, #%00000000
+
+Room3
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00011001
+    .byte #%11111111, #%11111001
+    .byte #%00000000, #%00011001
+    .byte #%00000000, #%00000000
+    .byte #%10011000, #%00000000
+    .byte #%10011111, #%11111111
+    .byte #%10011000, #%00000000
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
+
+Room4
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
+    .byte #%11111111, #%10011111
+    .byte #%10000000, #%10000001
+    .byte #%10000000, #%10000001
+    .byte #%10011000, #%10000001
+    .byte #%10011000, #%11111001
+    .byte #%10011000, #%00000000
+    .byte #%10011000, #%00000000
+    .byte #%10011000, #%00000000
+    .byte #%10011111, #%11111111
+    .byte #%00000000, #%00000000
+    .byte #%00000000, #%00000000
 
 ; Epilogue
 
