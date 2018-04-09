@@ -29,6 +29,7 @@ distf   .byte
 zone    .byte
 ; In which zone did the player pick up fuel last?
 distifrac .byte
+; 0x8A
 currblock .byte
 lastfuelpickup .byte
 ; Fuel left
@@ -36,6 +37,7 @@ fueli    .byte
 fuelf    .byte
 fuellines .byte
 scanline  .byte
+; 0x90
 ;For collisioncheck
 xposprev .byte
 distiprev .byte
@@ -53,7 +55,9 @@ Digit3      .word
 Digit4      .word
 Digit5      .word
 
+; 0x9F
 BCDScore    hex 000000
+; 0xA2
 LoopCount   .byte ; counts scanline when drawing
 
 ZonedataPtr .word
@@ -236,7 +240,10 @@ NextIndex
         jmp NoFuel
 Fuel
         lda #2
-NoFuel        
+        jmp SaveFuel
+NoFuel 
+        lda #0
+SaveFuel
         sta ZonedataFuel,X
         iny
         stx Temp
@@ -259,10 +266,6 @@ SameZone
         inx
         cpx #16 
         bne NextIndex
-
-; TODO : Set the fuel
-        sta ZonedataFuel,Y
-
 
 ; Setup rows for frame
 ; --------------
@@ -379,6 +382,7 @@ PelletLoop
         sta scanline
         lda #$ff
         sta PF0
+        lda #0
 PlayFieldLoop
         sta WSYNC
         sta ENAM1
@@ -411,10 +415,6 @@ InSprite
         sta currblock
         tay
         lda ZonedataFuel,y
-        
-
-        
-DontShowPellet        
         dec scanline
         bne PlayFieldLoop
 
@@ -739,7 +739,7 @@ Room1
     .byte #%10000000, #%00000000, #0
     .byte #%10000000, #%00000000, #0
     .byte #%11111100, #%01111100, #0
-    .byte #%10000000, #%00000000, #100
+    .byte #%10000000, #%00000000, #90
     .byte #%10000000, #%00000000, #0
     .byte #%11000000, #%00000000, #0
     .byte #%11000000, #%00000000, #0
@@ -757,7 +757,7 @@ Room2
     .byte #%00000000, #%00000000, #0
     .byte #%11001100, #%11001100, #0
     .byte #%11001100, #%11001100, #0
-    .byte #%11001100, #%11001100, #0
+    .byte #%11001100, #%11001100, #60
     .byte #%11001100, #%11001100, #0
     .byte #%11001100, #%11001100, #0
     .byte #%11001100, #%11001100, #0
@@ -774,7 +774,7 @@ Room2
 Room3
     .byte #%00000000, #%00000000, #0
     .byte #%00000000, #%00000000, #0
-    .byte #%00000000, #%00000000, #0
+    .byte #%00000000, #%00000000, #130
     .byte #%00000000, #%00000000, #0
     .byte #%00000000, #%10011000, #0
     .byte #%11111111, #%10011111, #0
@@ -791,7 +791,7 @@ Room3
 
 Room4
     .byte #%00000000, #%00000000, #0
-    .byte #%00000000, #%00000000, #0
+    .byte #%00000000, #%00000000, #20
     .byte #%00000000, #%00000000, #0
     .byte #%00000000, #%00000000, #0
     .byte #%00000000, #%00000000, #0
