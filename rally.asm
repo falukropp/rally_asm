@@ -26,10 +26,11 @@ speedz  .byte ; Only needed for negative speed (Should only be FF or 00)
 disti   .byte
 distf   .byte
 ; Which zone is the topmost scanline in?
-zone    .byte
+zone     .byte
+; Which zone is the current chunk in?
+zoneForChunk .byte
 ; In which zone did the player pick up fuel last?
 distifrac .byte
-; 0x8A
 currblock .byte
 lastfuelpickup .byte
 ; Fuel left
@@ -37,15 +38,16 @@ fueli    .byte
 fuelf    .byte
 fuellines .byte
 scanline  .byte
-; 0x90
 ;For collisioncheck
 xposprev .byte
 distiprev .byte
 zoneprev .byte
 
 
-THREE_COPIES    equ %011 ;
-PLAYFIELD_SIZE  equ #162 ;
+THREE_COPIES    equ %011 
+PLAYFIELD_SIZE  equ #167 
+SPRITE_SIZE     equ #9   
+CAR_SCAN_LINE   equ #41   
 
 ; Pointers to bitmap for each digit
 Digit0      .word
@@ -55,9 +57,7 @@ Digit3      .word
 Digit4      .word
 Digit5      .word
 
-; 0x9F
 BCDScore    hex 000000
-; 0xA2
 LoopCount   .byte ; counts scanline when drawing
 
 ZonedataPtr .word
@@ -65,6 +65,7 @@ ZonedataPtr .word
 ZonedataLeft    ds 16
 ZonedataRight   ds 16
 ZonedataFuel    ds 16
+
 
         seg Code
         org $f000                
@@ -199,6 +200,7 @@ FuelLeft
     
 SetupRoom
         lda zone
+        sta zoneForChunk
         asl
         tay
 ; Set ZonePtr to current zone.        
@@ -235,7 +237,7 @@ NextIndex
         beq NoFuel
         sta pelletpos
         lda lastfuelpickup
-        cmp zone
+        cmp zoneForChunk
         bcc Fuel        
         jmp NoFuel
 Fuel
@@ -251,6 +253,7 @@ SaveFuel
         bcc SameZone
 ; Load the Room for the previous zone.
         lda zone
+        dec zoneForChunk
         asl
         tay
         dey
@@ -378,7 +381,8 @@ PelletLoop
         sta distifrac
         ldy #0
         sty currblock
-        lda #166
+        
+        lda #PLAYFIELD_SIZE-1
         sta scanline
         lda #$ff
         sta PF0
@@ -398,8 +402,8 @@ PlayFieldLoop
 
         lda scanline
         sec
-        sbc #41
-        cmp #9 ; SpriteHeight
+        sbc #CAR_SCAN_LINE
+        cmp #SPRITE_SIZE    ; SpriteHeight
         bcc InSprite
         lda #0
 InSprite
@@ -473,8 +477,16 @@ FuelmeterLoop:
         bit CXM1P
         bpl DoneWithFuelPickup
         
-        lda zone
-        sta lastfuelpickup
+; Picked up fuel. In which zone is the pellet/car?        
+        ldx zone
+; If disti > (PLAYFIELD_SIZE-CAR_SCAN_LINE) the car is in the same zone as the top line.
+        lda disti
+        cmp #PLAYFIELD_SIZE-CAR_SCAN_LINE
+        bcs SaveLastFuelPickup
+; ... otherwise the car was still in the previous zone.        
+        dex
+SaveLastFuelPickup
+        stx lastfuelpickup
         
         lda fueli
         clc
