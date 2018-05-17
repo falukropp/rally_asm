@@ -180,6 +180,30 @@ WasPositiveSpeed
         adc speedz
         sta zone
         
+; Engine sound
+; --------------
+        lda #3
+        sta AUDC0
+        lda speedi
+        cmp #5
+        bcs BackingSound
+        clc
+        adc 1
+        sta AUDV0
+        lda #$1F
+        clc
+        sbc speedi
+        sta AUDF0
+        jmp UpdateFuel
+BackingSound
+    lda #1
+        sta AUDV0
+    lda #2
+        sta AUDC0
+    lda #12
+        sta AUDF0
+
+UpdateFuel
 ; Update Fuel
 ; --------------
         lda fuelf
