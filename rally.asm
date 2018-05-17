@@ -359,8 +359,9 @@ PelletLoop
         sta WSYNC
         sta HMOVE
 
-        lda #0
+        lda $10
         sta NUSIZ1
+        lda $0
         sta VDELP1
         
         
@@ -436,7 +437,7 @@ InSprite
         sta PF2        
         lda #%00000010
         sta CTRLPF
-        lda #$80
+        lda #$1A
         sta COLUP0
         lda #$00
         sta COLUP1
