@@ -15,6 +15,7 @@
         org $80
 Temp        .byte
         
+fxcnt .byte
 ; Car Horiz pointer        
 xpos    .byte
 pelletpos .byte
@@ -167,7 +168,7 @@ Done
         bpl WasPositiveSpeed
         ldx #$FF
 WasPositiveSpeed
-    stx speedz
+        stx speedz
         
         lda speedf
         clc
@@ -194,14 +195,33 @@ WasPositiveSpeed
         clc
         sbc speedi
         sta AUDF0
-        jmp UpdateFuel
+        jmp CheckFX
 BackingSound
-    lda #1
+        lda #1
         sta AUDV0
-    lda #2
+        lda #2
         sta AUDC0
-    lda #12
+        lda #12
         sta AUDF0
+
+; FX Sound (Channel 1)
+; --------------
+CheckFX 
+    ; Any sound playing?
+    lda fxcnt
+        cmp #0
+        beq DoneWithFX
+    ; Done playing current fx?
+        sec
+        sbc 1
+        sta fxcnt
+        cmp #0
+        bne PlayFX
+        sta AUDV1
+        jmp DoneWithFX
+PlayFX  
+      
+DoneWithFX
 
 UpdateFuel
 ; Update Fuel
@@ -529,6 +549,15 @@ StoreFuel
         ldx #00
         ldy #00
         jsr AddScore
+; Play sound effect
+    lda #30
+        sta fxcnt
+        lda #$03
+        sta AUDV1
+        lda #12
+        sta AUDC1
+        lda #2
+        sta AUDF1
         
 DoneWithFuelPickup
 
