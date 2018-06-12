@@ -23,7 +23,6 @@ CAR_SCAN_LINE   equ #41
         seg.u Variables
         org $80
 Temp            .byte        
-fxcnt           .byte
 xpos            .byte ; Car Horiz pointer        
 pelletpos       .byte
 speedi          .byte ; Lines advancement per frame
@@ -33,15 +32,16 @@ disti           .byte ; Which line in the zone is the topmost scanline in?
 distf           .byte
 zone            .byte ; Which zone is the topmost scanline in?
 zoneForChunk    .byte ; Which zone is the current chunk in?
-distifrac       .byte ; In which zone did the player pick up fuel last?
+distifrac       .byte
 currblock       .byte
-lastfuelpickup  .byte
+lastfuelpickup  .byte ; In which zone did the player pick up fuel last?
 fueli           .byte ; Fuel left
 fuelf           .byte
+fuellines       .byte
 ;--------------------------------------------------------
 ;RAM - $90
 ;--------------------------------------------------------
-fuellines       .byte
+fxcnt           .byte
 scanline        .byte
 xposprev        .byte ; For collisioncheck
 distiprev       .byte
@@ -63,10 +63,15 @@ Digit5      .word
 ;RAM - $B0
 ;--------------------------------------------------------
     org $B0
-BCDScore    hex 000000
-LoopCount   .byte ; counts scanline when drawing
-
 ZonedataPtr .word
+LoopCount   .byte ; counts scanline when drawing
+BCDScore    hex 000000
+
+; When starting a new game, all data up to, but excluding, playState
+; are cleared to 0.
+playState       .byte ; 0 = Title/HiScore, 1 = Ingame
+HiScore     hex 000000
+
 
 ;--------------------------------------------------------
 ;RAM - $C0
@@ -114,7 +119,11 @@ NextFrame
 ; ----------------------------------------------
 
         TIMER_SETUP 37
-
+        lda playState
+        bne InGame
+        jmp splashScreen
+InGame        
+           
 ; Clear sprite
 ; ---------------------
         lda #0
@@ -596,6 +605,30 @@ DoneWithPFCollision
         sta CXCLR
         
         TIMER_WAIT      
+        jmp NextFrame
+
+; ==============================================        
+splashScreen        
+; ==============================================        
+
+        TIMER_WAIT
+
+        TIMER_SETUP 192
+        TIMER_WAIT      
+
+
+        TIMER_SETUP 30
+
+        bit INPT4
+        bmi StillInSplashScreen
+;Button pressed! Start game!
+        lda #1
+        sta playState
+                
+
+StillInSplashScreen        
+        TIMER_WAIT      
+
         jmp NextFrame
         
         
