@@ -11,45 +11,46 @@
         bne .vblank
         ENDM
 
-        seg.u Variables
-        org $80
-Temp        .byte
-        
-fxcnt .byte
-; Car Horiz pointer        
-xpos    .byte
-pelletpos .byte
-; Lines advancement per frame
-speedi  .byte
-speedf  .byte
-speedz  .byte ; Only needed for negative speed (Should only be FF or 00)
-; Which line in the zone is the topmost scanline in?
-disti   .byte
-distf   .byte
-; Which zone is the topmost scanline in?
-zone     .byte
-; Which zone is the current chunk in?
-zoneForChunk .byte
-; In which zone did the player pick up fuel last?
-distifrac .byte
-currblock .byte
-lastfuelpickup .byte
-; Fuel left
-fueli    .byte
-fuelf    .byte
-fuellines .byte
-scanline  .byte
-;For collisioncheck
-xposprev .byte
-distiprev .byte
-zoneprev .byte
-
 
 THREE_COPIES    equ %011 
 PLAYFIELD_SIZE  equ #167 
 SPRITE_SIZE     equ #9   
 CAR_SCAN_LINE   equ #41   
 
+;--------------------------------------------------------
+;RAM - $80
+;--------------------------------------------------------
+        seg.u Variables
+        org $80
+Temp            .byte        
+fxcnt           .byte
+xpos            .byte ; Car Horiz pointer        
+pelletpos       .byte
+speedi          .byte ; Lines advancement per frame
+speedf          .byte
+speedz          .byte ; Only needed for negative speed (Should only be FF or 00)
+disti           .byte ; Which line in the zone is the topmost scanline in? 
+distf           .byte
+zone            .byte ; Which zone is the topmost scanline in?
+zoneForChunk    .byte ; Which zone is the current chunk in?
+distifrac       .byte ; In which zone did the player pick up fuel last?
+currblock       .byte
+lastfuelpickup  .byte
+fueli           .byte ; Fuel left
+fuelf           .byte
+;--------------------------------------------------------
+;RAM - $90
+;--------------------------------------------------------
+fuellines       .byte
+scanline        .byte
+xposprev        .byte ; For collisioncheck
+distiprev       .byte
+zoneprev        .byte
+
+;--------------------------------------------------------
+;RAM - $A0
+;--------------------------------------------------------
+    org $A0
 ; Pointers to bitmap for each digit
 Digit0      .word
 Digit1      .word
@@ -58,11 +59,19 @@ Digit3      .word
 Digit4      .word
 Digit5      .word
 
+;--------------------------------------------------------
+;RAM - $B0
+;--------------------------------------------------------
+    org $B0
 BCDScore    hex 000000
 LoopCount   .byte ; counts scanline when drawing
 
 ZonedataPtr .word
 
+;--------------------------------------------------------
+;RAM - $C0
+;--------------------------------------------------------
+    org $C0
 ZonedataLeft    ds 16
 ZonedataRight   ds 16
 ZonedataFuel    ds 16
