@@ -86,10 +86,50 @@ ZonedataFuel    ds 16
         org $f000                
     
 start   
-NewGame
-FuelOut
-Crash
         CLEAN_START
+                
+; ----------------------------------------------
+; Start of frame - Vertical Sync
+; ----------------------------------------------
+
+NextFrame
+        VERTICAL_SYNC
+        
+; ----------------------------------------------
+; Vertical Blank
+; ----------------------------------------------
+
+        TIMER_SETUP 37
+        lda playState
+        beq splashScreen
+        jmp InGame
+
+; ==============================================        
+splashScreen        
+; ==============================================        
+
+        TIMER_WAIT
+        TIMER_SETUP 192
+
+        ; Draw logo and Score + Highscore
+
+        TIMER_WAIT      
+        TIMER_SETUP 30
+
+        bit INPT4
+        bmi StillInSplashScreen
+;Button pressed! Start game!
+        jmp NewGame
+                
+
+StillInSplashScreen        
+        TIMER_WAIT      
+
+        jmp NextFrame
+        
+; ==============================================        
+NewGame
+; ==============================================        
     
         lda #80
         sta xpos
@@ -106,23 +146,24 @@ Crash
         sta disti
         lda #1
         sta zone
-                
-; ----------------------------------------------
-; Vertical Sync
-; ----------------------------------------------
+        sta playState
 
-NextFrame
-        VERTICAL_SYNC
+        lda #0
+        sta distf
+        sta speedi
+        sta speedf
+        sta speedz
+        sta lastfuelpickup
+        sta ZonedataPtr
+        sta ZonedataPtr+1
         
-; ----------------------------------------------
-; Vertical Blank
-; ----------------------------------------------
+        TIMER_WAIT
 
-        TIMER_SETUP 37
-        lda playState
-        bne InGame
-        jmp splashScreen
+        jmp NextFrame
+        
+; ==============================================        
 InGame        
+; ==============================================        
            
 ; Clear sprite
 ; ---------------------
@@ -242,7 +283,6 @@ PlayFX
 DoneWithFX
 
 UpdateFuel
-; Update Fuel
 ; --------------
         lda fuelf
         sec
@@ -608,30 +648,16 @@ DoneWithPFCollision
         jmp NextFrame
 
 ; ==============================================        
-splashScreen        
+FuelOut
 ; ==============================================        
 
-        TIMER_WAIT
+; TODO: Update Hiscore
 
-        TIMER_SETUP 192
-        TIMER_WAIT      
-
-
-        TIMER_SETUP 30
-
-        bit INPT4
-        bmi StillInSplashScreen
-;Button pressed! Start game!
-        lda #1
+        lda #0
         sta playState
-                
-
-StillInSplashScreen        
-        TIMER_WAIT      
-
         jmp NextFrame
-        
-        
+
+
 ; ==============================================        
 ; Subroutines
 ; ==============================================     
