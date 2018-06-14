@@ -69,8 +69,9 @@ BCDScore    hex 000000
 
 ; When starting a new game, all data up to, but excluding, playState
 ; are cleared to 0.
-playState       .byte ; 0 = Title/HiScore, 1 = Ingame
+playState   .byte ; 0 = Title/HiScore, 1 = Ingame
 HiScore     hex 000000
+DigitPtr    .word
 
 
 ;--------------------------------------------------------
@@ -108,10 +109,29 @@ NextFrame
 splashScreen        
 ; ==============================================        
 
+        jsr setupscore
+        
+        lda #<BCDScore
+        sta DigitPtr
+        lda #>BCDScore
+        sta DigitPtr+1
+
         TIMER_WAIT
         TIMER_SETUP 192
 
         ; Draw logo and Score + Highscore
+
+        jsr GetDigitPtrs    ; get pointers        
+        jsr DrawDigits      ; draw digits
+
+        lda #<HiScore
+        sta DigitPtr
+        lda #>HiScore
+        sta DigitPtr+1
+
+        jsr GetDigitPtrs    ; get pointers        
+        jsr DrawDigits      ; draw digits
+
 
         TIMER_WAIT      
         TIMER_SETUP 30
@@ -159,6 +179,11 @@ NewGame
         sta BCDScore
         sta BCDScore+1
         sta BCDScore+2
+
+        lda #<BCDScore
+        sta DigitPtr
+        lda #>BCDScore
+        sta DigitPtr+1
         
         TIMER_WAIT
 
@@ -375,29 +400,11 @@ SameZone
         cpx #16 
         bne NextIndex
 
+        jsr setupscore
+
 ; Setup rows for frame
 ; --------------
         
-; Setup Score
-setupscore:
-        lda #THREE_COPIES
-        sta NUSIZ0
-        sta NUSIZ1
-; set horizontal position of player objects
-        sta WSYNC
-        SLEEP 26 ; Works with 26
-        sta RESP0
-        sta RESP1
-        lda #0
-        sta HMP0
-        lda #$10
-        sta HMP1
-        sta WSYNC
-        sta HMOVE
-        sta HMCLR
-        lda #1
-        sta VDELP0
-        sta VDELP1
         
         TIMER_WAIT
         
@@ -697,6 +704,29 @@ DivideLoop
     sta HMP0,x  ; set fine offset
     rts     ; return to caller
 
+; Setup Score
+setupscore subroutine
+        lda #THREE_COPIES
+        sta NUSIZ0
+        sta NUSIZ1
+; set horizontal position of player objects
+        sta WSYNC
+        SLEEP 26 ; Works with 26
+        sta RESP0
+        sta RESP1
+        lda #0
+        sta HMP0
+        lda #$10
+        sta HMP1
+        sta WSYNC
+        sta HMOVE
+        sta HMCLR
+        lda #1
+        sta VDELP0
+        sta VDELP1
+        rts
+
+
 
 ; Adds value to 6-BCD-digit score.
 ; A = 1st BCD digit
@@ -724,7 +754,7 @@ GetDigitPtrs subroutine
     ldx #0  ; leftmost bitmap
         ldy #2  ; start from most-sigificant BCD value
 .Loop
-        lda BCDScore,y  ; get BCD value
+        lda (DigitPtr),y  ; get BCD value
         and #$f0    ; isolate high nibble (* 16)
         lsr     ; shift right 1 bit (* 8)
         sta Digit0,x    ; store pointer lo byte
@@ -732,7 +762,7 @@ GetDigitPtrs subroutine
         sta Digit0+1,x  ; store pointer hi byte
         inx
         inx     ; next bitmap pointer
-        lda BCDScore,y  ; get BCD value (again)
+        lda (DigitPtr),y  ; get BCD value (again)
         and #$f     ; isolate low nibble
         asl
         asl
