@@ -156,6 +156,9 @@ NewGame
         sta lastfuelpickup
         sta ZonedataPtr
         sta ZonedataPtr+1
+        sta BCDScore
+        sta BCDScore+1
+        sta BCDScore+2
         
         TIMER_WAIT
 
@@ -651,7 +654,13 @@ DoneWithPFCollision
 FuelOut
 ; ==============================================        
 
+        lda #0
+        sta AUDC1
+        sta AUDV1
+        sta AUDC0
+        sta AUDV0
 ; TODO: Update Hiscore
+
 
         lda #0
         sta playState
