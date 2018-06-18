@@ -706,6 +706,10 @@ DivideLoop
 
 ; Setup Score
 setupscore subroutine
+        lda #$1A
+        sta COLUP0
+        sta COLUP1
+
         lda #THREE_COPIES
         sta NUSIZ0
         sta NUSIZ1
