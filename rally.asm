@@ -661,14 +661,33 @@ DoneWithPFCollision
 FuelOut
 ; ==============================================        
 
+; Silence
+
         lda #0
         sta AUDC1
         sta AUDV1
         sta AUDC0
         sta AUDV0
-; TODO: Update Hiscore
+        
+; New Highscore?
+
+    ldy BCDScore+2
+        ldx BCDScore+1
+        lda BCDScore
+        cmp HiScore  ; compare high bytes
+        bcc DoneWithHighscoreCheck
+        cpx HiScore+1  ; compare middle bytes
+        bne DoneWithHighscoreCheck
+    cpy HiScore+2  ; compare low bytes
+        bne DoneWithHighscoreCheck
+        
+; New Hiscore!        
+        sta HiScore
+        stx HiScore+1
+        sty HiScore+2
 
 
+DoneWithHighscoreCheck
         lda #0
         sta playState
         jmp NextFrame
