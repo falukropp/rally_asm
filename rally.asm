@@ -131,6 +131,36 @@ splashScreen
 
         jsr GetDigitPtrs    ; get pointers        
         jsr DrawDigits      ; draw digits
+        lda #66
+        sta COLUPF
+        ldx #8
+        ldy #7
+
+LogoLoop
+    ; From Chap 20 in "Making game for the Atari 2600"
+        ; WSYNC and store playfield registers
+        sta WSYNC
+        lda LogoPF0Left,y
+        sta PF0
+        lda LogoPF1Left,y
+        sta PF1
+        lda LogoPF2Left,y
+        sta PF2
+        nop
+        nop
+        nop
+        lda LogoPF0Right,y
+        sta PF0
+        lda LogoPF1Right,y
+        sta PF1
+        lda LogoPF2Right,y
+        sta PF2
+        dex 
+        bne LogoLoop
+        ldx #8
+        dey 
+        bne LogoLoop    ; repeat until all scanlines drawn
+
 
 
         TIMER_WAIT      
@@ -1002,6 +1032,65 @@ Room4
     .byte #%10011111, #%11111111, #0
     .byte #%00000000, #%00000000, #0
     .byte #%00000000, #%00000000, #0
+
+LogoPF0Left
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%00000000
+LogoPF0Right
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%10100000
+        .byte #%10100000
+        .byte #%01100000
+        .byte #%10100000
+        .byte #%01100000
+        .byte #%00000000
+
+LogoPF1Left
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%01010111
+        .byte #%01010101
+        .byte #%01100101
+        .byte #%01010101
+        .byte #%01100101
+LogoPF1Right        
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%01010011
+        .byte #%01010101
+        .byte #%01110100
+        .byte #%01010101
+        .byte #%00100010
+        .byte #%00000000
+
+LogoPF2Left
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%01001010
+        .byte #%01001110
+        .byte #%01001110
+        .byte #%01001110
+        .byte #%11101010
+LogoPF2Right        
+        .byte #%00000000
+        .byte #%00000000
+        .byte #%10101100
+        .byte #%11101010
+        .byte #%10100010
+        .byte #%10101010
+        .byte #%01000100
+        .byte #%00000000
+
+
 
 ; Epilogue
 
