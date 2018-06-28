@@ -137,8 +137,6 @@ splashScreen
         ldy #7
 
 LogoLoop
-    ; From Chap 20 in "Making game for the Atari 2600"
-        ; WSYNC and store playfield registers
         sta WSYNC
         lda LogoPF0Left,y
         sta PF0
@@ -234,8 +232,17 @@ InGame
         sta COLUP0
         sta COLUP1
         
-; Read joystick left right
-; ---------------------
+; Skip joystick read / update dist  if in WinGame state
+
+    lda playState
+        cmp #2
+        bne ReadJoystick
+        jmp WinGame
+                
+; ---------------------------------------------
+ReadJoystick
+; ---------------------------------------------
+
         ldx xpos
         beq NotMovingLeft
         bit SWCHA
@@ -252,6 +259,9 @@ NotMovingRight
         
 ; Read joystick up/down
 ; ---------------------
+    lda playState
+        cmp #2
+        beq DoneWithJoystick
 
     lda speedi
         cmp #4
@@ -263,29 +273,32 @@ NotMovingRight
         clc
         adc #$10
         sta speedf
-        bcc Done
+        bcc DoneWithJoystick
         inc speedi        
-        jmp Done
+        jmp DoneWithJoystick
 NotAccelerating  
     lda speedi
         cmp #-2
-        beq Done
+        beq DoneWithJoystick
         lda #$20
         and SWCHA
-        bne Done
+        bne DoneWithJoystick
         lda speedf
         sec
         sbc #$10
         sta speedf
-        bcs Done
+        bcs DoneWithJoystick
         dec speedi        
-Done
+DoneWithJoystick
     ldx #00
     lda speedi
         bpl WasPositiveSpeed
         ldx #$FF
 WasPositiveSpeed
         stx speedz
+        
+        
+UpdateDist        
         
         lda speedf
         clc
@@ -297,6 +310,29 @@ WasPositiveSpeed
         lda zone
         adc speedz
         sta zone
+        
+CheckIfGoal
+    cmp #Zones
+        bne DoneWithGoalCheck
+        lda disti
+        cmp #$E7
+        bcc DoneWithGoalCheck
+        lda #0
+        sta speedi
+        sta speedf
+        sta speedz
+        lda #2
+        sta playState
+        
+; ==============================================        
+WinGame        
+; ==============================================        
+        
+        
+
+; ==============================================        
+DoneWithGoalCheck
+; ==============================================        
         
 ; Engine sound
 ; --------------
@@ -326,18 +362,14 @@ BackingSound
 CheckFX 
     ; Any sound playing?
     lda fxcnt
-        cmp #0
         beq DoneWithFX
     ; Done playing current fx?
         sec
         sbc 1
         sta fxcnt
-        cmp #0
-        bne PlayFX
+        bne DoneWithFX
         sta AUDV1
-        jmp DoneWithFX
-PlayFX  
-      
+        
 DoneWithFX
 
 UpdateFuel
@@ -379,7 +411,7 @@ SetupRoom
         lsr
         lsr
         sta Temp
-; (Yes, asl and adc, there a three bytes per chunk.)
+; (Yes, asl and adc, there are three bytes per chunk.)
         asl
         clc
         adc Temp
@@ -921,21 +953,27 @@ Zonedata
     .word Room0
     .word Room1
     .word Room5
-    .word Room10
-    .word Room5
-    .word Room2
-    .word Room8
-    .word Room9
-    .word Room5
-    .word Room6
-    .word Room7
-    .word Room2
-    .word Room3
-    .word Room4
-    .word Room3
-    .word Room2
-    .word Room1
-    .word Room0
+    .word GoalRoom
+;    .word Room10
+;    .word Room5
+;    .word Room2
+;    .word Room8
+;    .word Room9
+;    .word Room5
+;    .word Room6
+;    .word Room7
+;    .word Room2
+;    .word Room3
+;    .word Room4
+;    .word Room3
+;    .word Room2
+;    .word Room1
+;    .word Room0
+    
+ZonedataEnd    
+
+Zones EQU [ZonedataEnd - Zonedata] / 2 - 1
+    
     
 Fueldata 
 ; xpos, scanline.
@@ -1149,6 +1187,25 @@ Room10
         .byte #%10000000, #%11111111, 0
         .byte #%10000000, #%00111111, 0
         .byte #%11000001, #%00000111, 0
+        
+GoalRoom
+        .byte #%11111111, #%11111111, 0
+        .byte #%11010111, #%11011110, 0
+        .byte #%11010110, #%10101101, 0
+        .byte #%11101110, #%10001100, 0
+        .byte #%11101110, #%10101101, 0
+        .byte #%11111111, #%11111111, 0
+        .byte #%01100110, #%01100110, 0
+        .byte #%11111111, #%11111111, 0
+        .byte #%00000000, #%00000000, 0
+        .byte #%00000000, #%00000000, 0
+        .byte #%00000000, #%00000000, 0
+        .byte #%00000000, #%00000000, 0
+        .byte #%00000000, #%00000000, 0
+        .byte #%00000000, #%00000000, 0
+        .byte #%00000000, #%00000000, 0
+        .byte #%00000000, #%00000000, 0
+        
         
         
 
