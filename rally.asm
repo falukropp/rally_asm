@@ -10,6 +10,14 @@
         dex
         bne .vblank
         ENDM
+        
+        MAC SILENCE
+        lda #0
+        sta AUDC1
+        sta AUDV1
+        sta AUDC0
+        sta AUDV0
+        ENDM
 
 
 THREE_COPIES    equ %011 
@@ -232,12 +240,12 @@ InGame
         sta COLUP0
         sta COLUP1
         
-; Skip joystick read / update dist  if in WinGame state
+; Skip joystick read / update dist if in WinGame state
 
     lda playState
         cmp #2
         bne ReadJoystick
-        jmp WinGame
+        jmp UpdateFuel
                 
 ; ---------------------------------------------
 ReadJoystick
@@ -259,10 +267,6 @@ NotMovingRight
         
 ; Read joystick up/down
 ; ---------------------
-    lda playState
-        cmp #2
-        beq DoneWithJoystick
-
     lda speedi
         cmp #4
         beq NotAccelerating
@@ -324,14 +328,14 @@ CheckIfGoal
         lda #2
         sta playState
         
-; ==============================================        
-WinGame        
-; ==============================================        
+    SILENCE        
         
+        jmp SetupRoom
         
+DoneWithGoalCheck        
 
 ; ==============================================        
-DoneWithGoalCheck
+SoundFX
 ; ==============================================        
         
 ; Engine sound
@@ -372,16 +376,34 @@ CheckFX
         
 DoneWithFX
 
+; ==============================================        
 UpdateFuel
-; --------------
+; ==============================================        
+
+    lda playState
+        cmp #2
+        bne IngameFuelConsumption
+        
+        lda fueli
+        lsr
+        ldx #00
+        ldy #00
+        jsr AddScore
+        
+        dec fueli
+        
+        bne SetupRoom
+        jmp FuelOut
+        
+        
+IngameFuelConsumption
         lda fuelf
         sec
         sbc #4
         sta fuelf
         lda fueli
         sbc #0
-        bpl FuelLeft
-        
+        bpl FuelLeft        
         jmp FuelOut
 FuelLeft
     sta fueli
@@ -390,7 +412,9 @@ FuelLeft
 
 
     
+; ==============================================        
 SetupRoom
+; ==============================================        
         lda zone
         sta zoneForChunk
         asl
@@ -723,27 +747,24 @@ DoneWithPFCollision
 FuelOut
 ; ==============================================        
 
-; Silence
-
-        lda #0
-        sta AUDC1
-        sta AUDV1
-        sta AUDC0
-        sta AUDV0
+    SILENCE        
         
 ; New Highscore?
 
-    ldy BCDScore+2
-        ldx BCDScore+1
         lda BCDScore
-        cmp HiScore  ; compare high bytes
-        bcc DoneWithHighscoreCheck
-        cpx HiScore+1  ; compare middle bytes
-        bne DoneWithHighscoreCheck
-    cpy HiScore+2  ; compare low bytes
-        bne DoneWithHighscoreCheck
+        ldx BCDScore+1
+        ldy BCDScore+2
         
-; New Hiscore!        
+        cpy HiScore+2
+        bcc DoneWithHighscoreCheck
+        bne NewHighscore
+        cpx HiScore+1
+        bcc DoneWithHighscoreCheck
+        bne NewHighscore
+        cmp HiScore
+        bcc DoneWithHighscoreCheck
+        
+NewHighscore        
         sta HiScore
         stx HiScore+1
         sty HiScore+2
@@ -1064,8 +1085,8 @@ Room3
 
 Room4
     .byte #%00000000, #%00000000, #0
-    .byte #%00000000, #%00000000, #20
     .byte #%00000000, #%00000000, #0
+    .byte #%00000000, #%00000000, #80
     .byte #%00000000, #%00000000, #0
     .byte #%00000000, #%00000000, #0
     .byte #%11111111, #%11111001, #0
@@ -1082,8 +1103,8 @@ Room4
 
 Room5
     .byte #%00000000, #%00000000, #0
-    .byte #%00000000, #%00110000, #20
     .byte #%00000000, #%00110000, #0
+    .byte #%00000000, #%00110000, #60
     .byte #%00000000, #%00000000, #0
     .byte #%00000000, #%00000000, #0
     .byte #%00000000, #%00000000, #0
@@ -1102,7 +1123,7 @@ Room6
         .byte #%00000000, #%00000000, #0
         .byte #%00000000, #%00000100, #0
         .byte #%11111111, #%00000111, #0
-        .byte #%10000000, #%00000100, #0
+        .byte #%10000000, #%00000100, #80
         .byte #%10000000, #%00000000, #0
         .byte #%10000000, #%00000000, #0
         .byte #%10000000, #%11000000, #0
@@ -1120,7 +1141,7 @@ Room7
         .byte #%00100000, #%11000100, 0
         .byte #%01100000, #%00001100, 0
         .byte #%00100000, #%00000100, 0
-        .byte #%00100010, #%01000100, 0
+        .byte #%00100010, #%01000100, #80
         .byte #%00000010, #%11000000, 0
         .byte #%00000011, #%11000000, 0
         .byte #%00000010, #%11000000, 0
@@ -1138,8 +1159,8 @@ Room8
         .byte #%11111110, #%11111100, 0
         .byte #%10000000, #%11000000, 0
         .byte #%00000000, #%10000000, 0
-        .byte #%00010000, #%10000011, 0
-        .byte #%00011111, #%10000111, 0
+        .byte #%00010000, #%10000011, #80
+        .byte #%00011111, #%10000111, #0
         .byte #%00011000, #%10000000, 0
         .byte #%00000000, #%10000000, 0
         .byte #%10000000, #%11000000, 0
@@ -1156,7 +1177,7 @@ Room9
         .byte #%11111110, #%11110000, 0
         .byte #%11111110, #%11110000, 0
         .byte #%11111100, #%11100000, 0
-        .byte #%11111100, #%11100000, 0
+        .byte #%11111100, #%11100000, #80
         .byte #%11111000, #%11000000, 0
         .byte #%11111000, #%11000000, 0
         .byte #%11110000, #%10000000, 0
@@ -1174,7 +1195,7 @@ Room10
         .byte #%11111110, #%11110000, 0
         .byte #%11111110, #%11110000, 0
         .byte #%11111100, #%01100000, 0
-        .byte #%11111100, #%00000000, 0
+        .byte #%11111100, #%00000000, #80
         .byte #%11111000, #%00000001, 0
         .byte #%11111001, #%10001001, 0
         .byte #%11110001, #%10011001, 0
