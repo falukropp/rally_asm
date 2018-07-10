@@ -974,22 +974,20 @@ Zonedata
     .word Room0
     .word Room1
     .word Room5
+    .word Room6
+    .word Room2
+    .word Room6
+    .word Room8
+    .word Room9
+    .word Room7
+    .word Room5
+    .word Room3
+    .word Room4
+    .word Room10
+    .word Room5
+    .word Room2
+    .word Room1
     .word GoalRoom
-;    .word Room10
-;    .word Room5
-;    .word Room2
-;    .word Room8
-;    .word Room9
-;    .word Room5
-;    .word Room6
-;    .word Room7
-;    .word Room2
-;    .word Room3
-;    .word Room4
-;    .word Room3
-;    .word Room2
-;    .word Room1
-;    .word Room0
     
 ZonedataEnd    
 
@@ -1104,8 +1102,8 @@ Room4
 Room5
     .byte #%00000000, #%00000000, #0
     .byte #%00000000, #%00110000, #0
-    .byte #%00000000, #%00110000, #60
-    .byte #%00000000, #%00000000, #0
+    .byte #%00000000, #%00110000, #0
+    .byte #%00000000, #%00000000, #60
     .byte #%00000000, #%00000000, #0
     .byte #%00000000, #%00000000, #0
     .byte #%00001100, #%00000000, #0
@@ -1141,7 +1139,7 @@ Room7
         .byte #%00100000, #%11000100, 0
         .byte #%01100000, #%00001100, 0
         .byte #%00100000, #%00000100, 0
-        .byte #%00100010, #%01000100, #80
+        .byte #%00100010, #%01000100, #120
         .byte #%00000010, #%11000000, 0
         .byte #%00000011, #%11000000, 0
         .byte #%00000010, #%11000000, 0
@@ -1177,7 +1175,7 @@ Room9
         .byte #%11111110, #%11110000, 0
         .byte #%11111110, #%11110000, 0
         .byte #%11111100, #%11100000, 0
-        .byte #%11111100, #%11100000, #80
+        .byte #%11111100, #%11100000, #120
         .byte #%11111000, #%11000000, 0
         .byte #%11111000, #%11000000, 0
         .byte #%11110000, #%10000000, 0
