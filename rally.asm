@@ -3,6 +3,10 @@
     include "macro.h"
     include "xmacro.h"
 
+; Some code are copied from examples in 8bitworkshop.com with slight modifications
+; (Mostly in the subroutines section)
+; If they (still) work credit the original author(s), if they're broken blame me.
+
         MAC SKIP_SCANLINES
 .LINES  SET {1}
         ldx #.LINES
@@ -807,6 +811,7 @@ DivideLoop
     rts     ; return to caller
 
 ; Setup Score
+; Based on https://github.com/sehugg/8bitworkshop/blob/master/presets/vcs/examples/score6.a
 setupscore subroutine
         lda #$1A
         sta COLUP0
@@ -928,7 +933,10 @@ FontTable
         hex 0006067f661e0e06003c6606067c607e
         hex 003c66667c60663c00181818180c667e
         hex 003c66663c66663c003c66063e66663c
-        
+
+; ==============================================        
+; End of Subroutines
+; ==============================================     
 
         align $100
 SpriteData
