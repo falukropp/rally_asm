@@ -1001,22 +1001,6 @@ ZonedataEnd
 
 Zones EQU [ZonedataEnd - Zonedata] / 2 - 1
     
-    
-Fueldata 
-; xpos, scanline.
-; -1 on xpos means no fuel in that room.
-    .byte  #-1, #0
-    
-    .byte  #-1, #0
-    .byte  #-1, #0
-    .byte  #-1, #0
-    .byte  #-1, #0
-    .byte  #-1, #0
-    .byte  #-1, #0
-    .byte  #-1, #0
-    
-    .byte  #-1, #0
-
 Room0
     .byte #%11111111, #%11111111, #0
     .byte #%11111111, #%11111111, #0
